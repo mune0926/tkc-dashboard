@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TKC経営指標ダッシュボード — 206業種の経営データを可視化</title>
+<meta name="description" content="TKC全国会BAST速報版の経営指標206業種を、インタラクティブなダッシュボードで分析。1人起業に向いた業種のスクリーニングも。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #FAFAF8;
+  --bg2: #F2F1ED;
+  --bg3: #EAEAE5;
+  --card: #FFFFFF;
+  --text: #1A1A18;
+  --text2: #6B6B65;
+  --text3: #9C9C95;
+  --border: rgba(0,0,0,0.08);
+  --accent: #2D5A27;
+  --accent2: #4A8C42;
+  --accent-bg: #EDF5EC;
+  --danger: #B5432A;
+  --danger-bg: #FAEDEA;
+  --warn: #A07018;
+  --warn-bg: #FDF6E8;
+  --blue: #2A5B8C;
+  --blue-bg: #EBF1F7;
+  --purple: #5B4299;
+  --font-ja: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', sans-serif;
+  --font-num: 'Outfit', sans-serif;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.03);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141413;
+    --bg2: #1E1E1C;
+    --bg3: #282826;
+    --card: #1E1E1C;
+    --text: #E8E8E4;
+    --text2: #A0A09A;
+    --text3: #6E6E68;
+    --border: rgba(255,255,255,0.08);
+    --accent: #6DB865;
+    --accent2: #8CD484;
+    --accent-bg: #1A2E19;
+    --danger: #E06B55;
+    --danger-bg: #2A1510;
+    --warn: #D4A640;
+    --warn-bg: #2A2210;
+    --blue: #6AADDF;
+    --blue-bg: #12253A;
+    --purple: #9B82D4;
+    --shadow: 0 1px 3px rgba(0,0,0,0.2), 0 0 0 0.5px rgba(255,255,255,0.04);
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--font-ja); background: var(--bg); color: var(--text); line-height: 1.7; -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+header { padding: 48px 0 32px; border-bottom: 1px solid var(--border); margin-bottom: 32px; }
+header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 6px; }
+header p { font-size: 13px; color: var(--text2); }
+header .badge { display: inline-block; background: var(--accent-bg); color: var(--accent); font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; margin-top: 8px; }
+.sector-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 24px; position: sticky; top: 0; z-index: 20; background: var(--bg); padding: 12px 0; border-bottom: 1px solid var(--border); }
+.sector-btn { font-family: var(--font-ja); font-size: 12px; padding: 7px 16px; border: 1px solid var(--border); border-radius: 20px; background: var(--card); color: var(--text2); cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+.sector-btn:hover { border-color: var(--accent); color: var(--accent); }
+.sector-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.metrics-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 28px; }
+.metric-card { background: var(--card); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); }
+.metric-card .mc-label { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
+.metric-card .mc-val { font-family: var(--font-num); font-size: 24px; font-weight: 500; letter-spacing: -0.03em; }
+.metric-card .mc-unit { font-size: 12px; color: var(--text2); margin-left: 2px; }
+.tabs { display: flex; gap: 0; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
+.tab { font-family: var(--font-ja); font-size: 13px; padding: 10px 20px; background: none; border: none; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+.chart-container { background: var(--card); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow); margin-bottom: 24px; }
+.chart-container h3 { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+.chart-container .chart-sub { font-size: 12px; color: var(--text3); margin-bottom: 16px; }
+.chart-wrap { position: relative; width: 100%; }
+.legend-row { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 12px; font-size: 12px; color: var(--text2); }
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.table-container { background: var(--card); border-radius: var(--radius-lg); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 24px; }
+.table-controls { padding: 16px 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; border-bottom: 1px solid var(--border); }
+.table-controls input { font-family: var(--font-ja); font-size: 13px; padding: 7px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); width: 240px; outline: none; }
+.table-controls input:focus { border-color: var(--accent); }
+.table-controls .tc-count { font-size: 12px; color: var(--text3); margin-left: auto; }
+.tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 900px; }
+th { text-align: left; padding: 10px 8px; font-size: 11px; font-weight: 500; color: var(--text3); border-bottom: 1px solid var(--border); cursor: pointer; white-space: nowrap; user-select: none; transition: color 0.15s; }
+th:hover { color: var(--text); }
+th.sorted { color: var(--accent); }
+td { padding: 9px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+tr:hover td { background: var(--bg2); }
+.num { font-family: var(--font-num); text-align: right; font-variant-numeric: tabular-nums; }
+.sector-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 2px 8px; border-radius: 4px; }
+.mini-bar { display: inline-block; height: 8px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+.screening { background: var(--card); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow); margin-bottom: 24px; }
+.screening h3 { font-size: 15px; font-weight: 500; margin-bottom: 12px; }
+.screening .s-desc { font-size: 13px; color: var(--text2); margin-bottom: 16px; line-height: 1.8; }
+.filter-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
+.filter-tag { font-size: 11px; padding: 4px 12px; border-radius: 20px; background: var(--accent-bg); color: var(--accent); font-weight: 500; }
+.result-cards { display: flex; flex-direction: column; gap: 10px; }
+.r-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; transition: border-color 0.15s; }
+.r-card:hover { border-color: var(--accent); }
+.r-card.warn { border-left: 3px solid var(--danger); }
+.r-card .rc-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.r-card .rc-rank { font-family: var(--font-num); font-size: 11px; color: var(--text3); }
+.r-card .rc-name { font-size: 15px; font-weight: 500; }
+.r-card .rc-sector { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.r-card .rc-profit { font-family: var(--font-num); font-size: 20px; font-weight: 500; }
+.r-card .rc-profit-label { font-size: 10px; color: var(--text3); }
+.rc-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 6px; }
+.rc-m { font-size: 11px; }
+.rc-m .l { color: var(--text3); }
+.rc-m .v { font-family: var(--font-num); font-weight: 500; }
+.good { color: var(--accent); }
+.bad { color: var(--danger); }
+.warn-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.warn-tag { font-size: 10px; padding: 2px 8px; border-radius: 4px; background: var(--danger-bg); color: var(--danger); }
+.toggle-row { display: flex; gap: 6px; margin-bottom: 16px; }
+.toggle-btn { font-family: var(--font-ja); font-size: 12px; padding: 6px 14px; border: 1px solid var(--border); border-radius: 20px; background: var(--card); color: var(--text2); cursor: pointer; transition: all 0.2s; }
+.toggle-btn.t-good.active { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
+.toggle-btn.t-bad.active { background: var(--danger-bg); color: var(--danger); border-color: var(--danger); }
+footer { padding: 40px 0; border-top: 1px solid var(--border); margin-top: 40px; text-align: center; font-size: 12px; color: var(--text3); line-height: 2; }
+footer a { color: var(--accent); text-decoration: none; }
+@media (max-width: 600px) {
+  header h1 { font-size: 18px; }
+  .metrics-row { grid-template-columns: repeat(2, 1fr); }
+  .tab { padding: 8px 12px; font-size: 12px; }
+  .screening { padding: 16px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>TKC経営指標ダッシュボード</h1>
+    <p>BAST速報版 206業種の経営データをインタラクティブに分析</p>
+    <span class="badge">令和7年10月〜12月決算</span>
+  </header>
+
+  <div class="sector-bar" id="sectorBar"></div>
+  <div class="metrics-row" id="metricsRow"></div>
+
+  <div class="tabs" id="tabBar"></div>
+
+  <div class="tab-panel active" id="panel-overview">
+    <div class="chart-container">
+      <h3>業種別 主要指標の比較</h3>
+      <div class="chart-sub">6大分類の平均値を比較（全業種選択時）</div>
+      <div class="legend-row" id="leg1"></div>
+      <div class="chart-wrap" style="height:380px;"><canvas id="chart1"></canvas></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-scatter">
+    <div class="chart-container">
+      <h3>収益性マップ</h3>
+      <div class="chart-sub">横軸：限界利益率 ／ 縦軸：経常利益率 ／ バブルサイズ：平均売上高</div>
+      <div class="chart-wrap" style="height:440px;"><canvas id="chart2"></canvas></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-table">
+    <div class="table-container">
+      <div class="table-controls">
+        <input type="text" id="searchInput" placeholder="業種名で検索...">
+        <span class="tc-count" id="rowCount"></span>
+      </div>
+      <div class="tbl-wrap"><table><thead id="tHead"></thead><tbody id="tBody"></tbody></table></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-productivity">
+    <div class="chart-container">
+      <h3>1人当り生産性ランキング</h3>
+      <div class="chart-sub">1人当り限界利益と人件費の上位20業種</div>
+      <div class="legend-row" id="leg3"></div>
+      <div class="chart-wrap" style="height:560px;"><canvas id="chart3"></canvas></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-screening">
+    <div class="screening">
+      <h3>1人起業スクリーニング</h3>
+      <div class="s-desc">206業種のデータから「少人数で始められて、利益が出やすい業種」と「新規参入を避けるべき業種」を自動抽出します。</div>
+      <div class="toggle-row">
+        <button class="toggle-btn t-good active" onclick="toggleScreen('good')">有望な業種</button>
+        <button class="toggle-btn t-bad" onclick="toggleScreen('bad')">避けるべき業種</button>
+      </div>
+      <div id="screenGood">
+        <div class="filter-tags">
+          <span class="filter-tag">従業員 10人以下</span>
+          <span class="filter-tag">経常利益率 7%以上</span>
+          <span class="filter-tag">BEP 90%以下</span>
+          <span class="filter-tag">限界利益率 50%以上</span>
+          <span class="filter-tag">対前年比 100%以上</span>
+        </div>
+        <div class="result-cards" id="goodCards"></div>
+      </div>
+      <div id="screenBad" style="display:none;">
+        <div class="s-desc" style="margin-top:0;">「低利益+高BEP」「大規模人員」「黒字率低」「売上縮小」「高固定費」の5つの危険パターンでスコア化。</div>
+        <div class="result-cards" id="badCards"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div>データ出典：<a href="https://www.tkc.jp/tkcnf/bast/" target="_blank" rel="noopener">TKC全国会 BAST（速報版）経営指標</a></div>
+    <div>このダッシュボードは完全にクライアントサイドで動作します。サーバーへのデータ送信は一切ありません。</div>
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const isDark = matchMedia('(prefers-color-scheme:dark)').matches;
+const GRID = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+const TXT = isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.45)';
+const COLORS = {
+  '建設業':'#5B4299','製造業':'#2D5A27','卸売業':'#B5432A',
+  '小売業':'#2A5B8C','宿泊業・飲食サービス業':'#A07018','サービス業':'#7C5C3C'
+};
+const SECTOR_BG = {
+  '建設業':'#F0EDF8','製造業':'#EDF5EC','卸売業':'#FAEDEA',
+  '小売業':'#EBF1F7','宿泊業・飲食サービス業':'#FDF6E8','サービス業':'#F5F0EB'
+};
+if(isDark){Object.keys(SECTOR_BG).forEach(k=>{SECTOR_BG[k]='rgba(255,255,255,0.05)'});}
+
+const D=[
+["建設業","舗装工事業",39,73.6,280381,110.2,48.4,72118,53.2,40773,22755,8.1,83.2,21440,10372,5514,13.1],
+["建設業","冷暖房設備工事業",117,72.7,188195,110.3,43.6,45470,55.4,19600,17009,9.0,79.3,27389,11945,6617,6.9],
+["建設業","電気配線工事業",199,68.6,178456,112.1,49.7,46993,53.0,23524,18090,10.1,79.6,25131,12478,6618,7.1],
+["建設業","機械器具設置工事業",87,68.5,276336,112.1,53.4,82627,55.9,36897,28168,10.2,80.9,22650,12105,6772,12.2],
+["建設業","一般電気工事業",233,68.1,282976,107.0,50.1,80528,56.8,33588,27624,9.8,80.5,23866,11954,6791,11.9],
+["建設業","造園工事業",107,67.3,150612,104.0,58.6,49870,55.6,26923,11410,7.6,87.1,15387,9011,5095,9.8],
+["建設業","熱絶縁工事業",25,65.8,435686,96.9,42.5,101810,55.0,56483,26837,6.2,85.5,25404,10794,5936,17.2],
+["建設業","土木工事業",359,64.3,232282,106.1,53.4,64282,51.9,38840,20826,9.0,83.2,20524,10952,5679,11.3],
+["建設業","一般管工事業",195,62.7,242431,112.5,44.3,57813,53.8,26116,23434,9.7,78.2,25739,11399,6138,9.4],
+["建設業","電気通信工事業",65,62.5,196176,107.4,60.5,67214,56.6,29359,22111,11.3,81.4,16393,9918,5616,12.0],
+["建設業","左官工事業",47,61.0,105896,108.8,61.3,41871,64.5,15019,8072,7.6,87.6,13385,8211,5292,7.9],
+["建設業","金属製建具工事業",30,60.0,196534,107.7,35.4,40190,57.8,16848,12490,6.4,82.0,28471,10072,5822,6.9],
+["建設業","一般土木建築工事業",428,59.0,388720,105.0,38.5,71941,48.0,49911,27888,7.2,81.4,31002,11942,5737,12.5],
+["建設業","給排水・衛生設備工事業",184,57.7,222777,107.3,41.8,50866,54.6,24947,17380,7.8,81.4,25481,10659,5818,8.7],
+["建設業","型枠大工工事業",45,57.7,292259,107.3,43.8,70199,54.8,31206,26610,9.1,79.2,21355,9354,5129,13.7],
+["建設業","その他の管工事業",64,57.1,211184,91.7,51.1,64146,59.4,27497,16288,7.7,84.9,19704,10070,5985,10.7],
+["建設業","他に分類されない職別工事業",66,55.9,183876,108.2,53.6,58895,59.7,23795,15900,8.6,83.9,16017,8588,5130,11.5],
+["建設業","内装工事業",198,54.7,265677,108.6,31.1,43241,52.3,24628,14840,5.6,82.1,39492,12294,6427,6.7],
+["建設業","板金工事業",43,53.8,183854,98.3,35.1,35986,55.8,17354,11184,6.1,82.7,30912,10848,6050,5.9],
+["建設業","とび工事業",128,53.1,230752,110.4,52.2,64394,53.4,44946,11189,4.8,90.7,18269,9542,5098,12.6],
+["建設業","塗装工事業",173,52.6,193716,107.4,46.9,50217,55.3,28045,12542,6.5,86.2,21784,10211,5647,8.9],
+["建設業","建築工事業(木造除く)",173,52.4,609214,113.0,26.7,70871,43.6,53422,38250,6.3,76.5,54953,14662,6392,11.1],
+["建設業","土工・コンクリート工事業",85,50.9,266437,104.2,45.1,63629,52.9,43527,13106,4.9,89.1,23078,10417,5511,11.5],
+["建設業","防水工事業",42,50.0,208401,112.5,40.4,47783,56.7,24092,12399,6.0,85.3,26767,10824,6137,7.8],
+["建設業","鉄骨工事業",54,48.6,366763,93.2,40.2,76494,51.9,45360,25534,7.0,82.7,28610,11497,5967,12.8],
+["建設業","解体・はつり工事業",68,47.6,307446,120.3,51.0,63185,40.3,76156,17305,5.6,89.0,25736,13112,5289,11.9],
+["建設業","屋根工事業",29,47.5,232579,111.4,33.1,46528,60.5,20952,9463,4.1,87.7,27880,9223,5577,8.3],
+["建設業","木造建築工事業",247,47.0,286697,109.4,28.1,40715,50.6,27708,12084,4.2,85.0,35295,9911,5012,8.1],
+["建設業","鉄筋工事業",41,46.6,305859,101.8,47.3,91083,63.0,40481,13120,4.3,90.9,17798,8419,5300,17.2],
+["建設業","建築リフォーム工事業",100,46.1,200810,107.8,32.4,30733,47.3,23168,11078,5.5,83.0,37681,12193,5767,5.3],
+["建設業","大工工事業",33,41.3,211013,115.7,32.7,35396,51.2,22412,11267,5.3,83.7,27514,9007,4615,7.7],
+["製造業","建築用金属製品製造業",23,76.7,871335,111.1,48.0,211469,50.6,136938,69816,8.0,83.3,25513,12245,6192,34.2],
+["製造業","製茶業",37,72.5,301544,190.4,55.6,36342,21.9,56128,37357,24.4,55.8,32952,18121,9971,9.2],
+["製造業","配電盤・電力制御装置製造業",19,70.6,641183,121.1,51.6,157641,47.7,97420,75651,11.8,77.1,22741,11729,5591,28.2],
+["製造業","しょう油・食用アミノ酸製造業",12,70.6,344946,105.2,46.9,82607,51.1,63700,15414,4.5,90.5,20628,9671,4940,16.7],
+["製造業","産業用機械製造業(農業用)",12,70.6,916543,115.1,43.7,223876,47.2,141764,109060,11.9,70.2,28145,14945,7045,31.8],
+["製造業","生コンクリート製造業",21,63.6,526686,103.3,42.7,125144,36.3,126668,92794,10.0,73.1,41091,15280,5449,22.0],
+["製造業","製缶板金業",45,58.4,292143,110.5,47.5,80298,57.9,36164,20165,6.9,85.5,21825,10356,5994,13.4],
+["製造業","その他の電子部品・デバイス",30,53.6,603563,122.5,56.6,223632,65.5,57454,60547,10.0,82.3,11093,6279,4110,54.4],
+["製造業","自動車部分品・附属品製造業",74,52.1,1270691,114.0,36.3,261327,56.5,54099,43883,3.5,88.3,25893,9388,5325,49.1],
+["製造業","めん類製造業",19,44.2,1173489,106.9,35.5,159313,38.1,229051,30189,2.6,93.6,36175,11903,4917,32.4],
+["製造業","オフセット印刷業",26,35.6,472914,93.6,55.8,122601,56.6,64817,29076,6.1,86.6,21097,9658,5469,22.4],
+["製造業","一般製材業",18,34.0,484656,103.0,34.6,94745,56.5,54514,5338,3.8,90.7,25513,5692,3846,12.1],
+["卸売業","その他の衣服卸売業",31,77.5,166072,97.6,29.9,25514,51.3,17428,6786,4.1,86.4,32243,9655,4953,5.2],
+["卸売業","米麦卸売業",18,75.0,578067,147.1,20.8,35315,29.3,34647,50425,8.7,58.1,90941,18939,5555,6.4],
+["卸売業","鉄鋼一次製品卸売業",18,75.0,1906561,95.7,13.0,121930,49.0,71680,55150,2.9,77.8,102289,13346,6541,18.6],
+["卸売業","農業用機械器具卸売業",42,73.7,386573,111.6,32.4,60488,48.2,47352,17253,4.5,86.0,37150,12052,5812,10.4],
+["卸売業","建設機械・鉱山機械卸売業",17,68.0,1317727,96.5,20.8,87755,32.0,116962,69349,5.3,74.7,119129,24777,7933,11.1],
+["卸売業","酒類卸売業",20,58.8,2353908,99.8,11.8,132289,47.4,63440,83152,3.5,70.2,97393,11538,5473,24.2],
+["卸売業","電気機器卸売業",67,58.8,907835,98.8,25.0,113371,50.0,61464,52032,5.7,77.1,55681,13914,6953,16.3],
+["卸売業","食肉卸売業",38,50.0,1094349,105.7,17.7,92008,47.4,75215,26881,2.5,86.2,54012,9580,4541,20.3],
+["卸売業","野菜卸売業",54,47.0,1184944,103.1,13.7,69471,42.7,67540,25608,2.2,84.3,75541,10367,4428,15.7],
+["卸売業","生鮮魚介卸売業",56,50.9,714387,99.7,14.7,50460,47.9,40130,14735,2.1,86.0,64051,9443,4524,11.2],
+["卸売業","古紙卸売業",17,63.0,687548,101.0,39.7,138011,50.5,112976,22199,3.2,91.9,22608,8983,4538,30.4],
+["小売業","自動車部分品小売業",56,66.7,219979,110.1,34.7,37631,49.3,29447,9202,4.2,87.9,30765,10668,5263,7.2],
+["小売業","薬局",190,63.1,330675,103.1,38.6,79485,62.3,36109,11976,3.6,90.6,19154,7389,4604,17.3],
+["小売業","料理品小売業",23,60.5,592054,108.2,61.4,265477,73.0,85173,13044,2.2,96.4,5280,3243,2367,112.1],
+["小売業","コンビニエンスストア",123,51.3,718707,105.0,24.0,82676,47.9,83130,6887,1.0,96.0,20631,4957,2373,34.8],
+["小売業","自動車(新車)小売業",68,57.6,1124648,107.9,23.7,123148,46.2,122229,21126,1.9,92.1,48741,11550,5337,23.1],
+["小売業","時計・眼鏡・光学機械小売業",42,51.9,55709,96.8,55.8,13774,44.3,8602,8685,15.6,72.0,13383,7462,3309,4.2],
+["小売業","中古自動車小売業",220,51.9,464244,108.0,21.4,44560,44.9,45241,9431,2.0,90.5,51498,11007,4943,9.0],
+["小売業","洋品雑貨・小間物小売業",14,31.1,210127,113.0,54.2,36996,32.5,55473,10732,10.2,81.1,22937,12427,4038,9.2],
+["小売業","菓子小売業(製造小売)",24,36.9,258339,105.3,64.4,74533,44.8,85081,6663,2.6,96.0,5282,3400,1524,48.9],
+["小売業","紙・文房具小売業",15,40.5,343837,93.8,21.9,48384,64.2,20412,6542,1.9,91.3,24540,5377,3453,14.0],
+["小売業","婦人服小売業",14,20.3,198985,101.7,55.6,46121,41.7,60365,4220,2.1,96.2,8386,3856,1945,13.2],
+["小売業","新聞小売業",91,48.7,250909,98.6,43.2,71191,65.7,31893,5203,2.1,95.2,7017,3028,1991,35.8],
+["小売業","花・植木小売業",41,38.3,87408,102.2,55.3,25862,53.5,18906,3561,4.1,92.6,10047,5555,2973,8.7],
+["小売業","化粧品小売業",22,35.5,89554,106.5,52.4,24896,53.0,16469,5589,6.2,88.1,10955,7744,3045,8.2],
+["小売業","無店舗小売業(各種商品)",25,45.5,535207,115.4,37.6,47296,23.5,123399,30382,5.7,84.9,75808,28481,6699,7.1],
+["宿泊業・飲食サービス業","すし店",37,45.7,149249,106.1,60.5,42544,47.2,41926,5753,3.9,93.6,12859,7774,3665,11.6],
+["宿泊業・飲食サービス業","焼肉店",41,45.1,204348,102.8,59.8,64023,52.4,51234,7001,3.4,94.3,6139,3673,1923,33.3],
+["宿泊業・飲食サービス業","喫茶店",42,43.8,128179,108.9,68.1,43305,49.6,40967,2995,2.3,96.6,5664,3856,1913,22.6],
+["宿泊業・飲食サービス業","日本料理店",73,42.9,172580,101.2,66.4,62870,54.9,43844,7855,4.6,93.1,7062,4688,2572,24.4],
+["宿泊業・飲食サービス業","その他の専門料理店",97,42.0,199603,121.5,53.8,47351,44.1,42134,17851,8.9,83.4,10167,5467,2411,19.6],
+["宿泊業・飲食サービス業","旅館・ホテル",116,41.9,252265,107.9,80.2,71215,35.2,106923,24166,9.6,88.1,11717,9397,3307,21.5],
+["宿泊業・飲食サービス業","中華料理店",31,39.2,161393,102.5,70.3,62326,54.9,42616,8556,5.3,92.5,7107,4998,2744,22.7],
+["宿泊業・飲食サービス業","そば・うどん店",32,39.0,88276,113.3,68.1,32171,53.5,21644,6343,7.2,89.5,5707,3889,2080,15.5],
+["宿泊業・飲食サービス業","ラーメン店",51,37.0,206019,103.2,65.3,72788,54.1,53447,8333,4.0,93.5,7299,4768,2579,28.2],
+["宿泊業・飲食サービス業","バー・キャバレー・ナイトクラブ",61,35.7,109041,113.6,69.2,33631,44.6,34414,7359,6.7,90.2,11886,8220,3666,9.2],
+["宿泊業・飲食サービス業","食堂・レストラン",62,30.4,178322,110.6,64.2,62760,54.8,44336,7401,4.2,93.5,6327,4062,2226,28.2],
+["宿泊業・飲食サービス業","酒場・ビヤホール",106,29.0,234819,110.2,67.3,81118,51.4,64099,12740,5.4,91.9,5494,3695,1897,42.7],
+["サービス業","ごみ収集運搬業",59,78.7,157420,103.0,79.5,65217,52.1,50304,9550,6.1,92.4,10412,8272,4313,15.1],
+["サービス業","法律事務所",47,77.0,181634,112.8,98.7,93216,52.0,66181,19868,10.9,88.9,15909,15702,8164,11.4],
+["サービス業","獣医業",169,71.3,140792,106.1,76.0,63564,59.4,29737,13634,9.7,87.2,13140,9980,5932,10.7],
+["サービス業","労働者派遣業",163,70.3,295805,103.1,62.6,139930,75.5,30687,14638,4.9,92.1,5254,3290,2485,56.3],
+["サービス業","産業廃棄物処分業",66,69.5,443686,108.1,69.1,112441,36.7,151223,42886,9.7,86.0,22282,15395,5647,19.9],
+["サービス業","社会保険労務士事務所",70,68.0,65663,108.4,91.1,37333,62.4,16221,6287,9.6,89.5,8558,7799,4865,7.7],
+["サービス業","受託開発ソフトウェア業",234,66.3,281651,105.8,68.3,134435,69.9,34922,22942,8.1,88.1,14123,9643,6741,19.9],
+["サービス業","経営コンサルタント業",404,62.2,57243,109.6,78.5,22842,50.8,14628,7455,13.0,83.4,11453,8989,4570,5.0],
+["サービス業","情報処理サービス業",58,61.7,111106,101.1,79.2,66504,75.5,14936,6600,5.9,92.5,9116,7224,5457,12.2],
+["サービス業","警備業",64,61.0,274481,105.0,79.2,167173,76.9,36452,13775,5.0,93.7,3558,2818,2167,77.1],
+["サービス業","ビルメンテナンス業",83,59.7,348655,104.3,65.1,169552,74.7,37424,19893,5.7,91.2,5472,3561,2661,63.7],
+["サービス業","測量業",69,58.5,162527,106.0,79.8,84416,65.1,28938,16343,10.1,87.4,11267,8991,5852,14.4],
+["サービス業","他に分類されない専門サービス業",211,65.9,111518,112.8,55.8,30079,48.4,21373,10725,9.6,82.8,17000,9478,4585,6.6],
+["サービス業","経営コンサルタント業以外の技術サービス業",57,57.0,199640,106.2,56.5,66801,59.2,24603,21432,10.7,81.0,18105,10233,6058,11.0],
+["サービス業","自動車一般整備業",356,56.2,209713,106.5,44.7,51765,55.2,31604,10437,5.0,88.9,19731,8826,4870,10.6],
+["サービス業","建築設計業",200,56.2,171209,114.2,55.2,53624,56.7,26114,14783,8.6,84.4,20912,11545,6549,8.2],
+["サービス業","葬儀業",48,53.9,218858,103.6,64.7,62097,43.9,61297,18183,8.3,87.2,18047,11674,5120,12.1],
+["サービス業","訪問介護事業",121,51.3,95230,104.7,93.0,62850,71.0,20609,5086,5.3,94.3,4870,4528,3214,19.6],
+["サービス業","デザイン業",70,45.2,68283,112.4,62.0,22298,52.6,12577,7484,11.0,82.3,17020,10558,5558,4.0],
+["サービス業","美容業",250,44.0,133133,106.7,83.6,65937,59.3,40273,5075,3.8,95.4,7961,6654,3943,16.7],
+["サービス業","広告業",124,41.6,230509,109.4,36.8,40951,48.3,34754,9017,3.9,89.4,31821,11695,5653,7.2],
+["サービス業","普通洗濯業",65,48.5,121190,102.2,84.7,57285,55.8,40640,4770,3.9,95.4,4375,3708,2068,27.7],
+["サービス業","按摩マッサージ・鍼灸・整復師",53,28.6,76856,103.8,93.9,44410,61.5,22577,5167,6.7,92.8,6552,6151,3786,11.7],
+];
+
+let curSector='全業種', curTab='overview', sortCol=11, sortDir=-1, searchQ='';
+let charts={};
+
+function g(id){return document.getElementById(id);}
+function fmtK(v){return v>=10000?(v/10000).toFixed(1)+'億':v>=1000?Math.round(v/1000).toLocaleString()+'百万':v.toLocaleString();}
+function getF(){
+  let d=curSector==='全業種'?D:D.filter(r=>r[0]===curSector);
+  if(searchQ){const q=searchQ.toLowerCase();d=d.filter(r=>r[1].toLowerCase().includes(q));}
+  return d;
+}
+function avg(arr,i){return arr.length?arr.reduce((a,r)=>a+r[i],0)/arr.length:0;}
+
+function renderSectors(){
+  const s=['全業種',...Object.keys(COLORS)];
+  g('sectorBar').innerHTML=s.map(n=>`<button class="sector-btn${n===curSector?' active':''}" onclick="setSector('${n}')">${n}</button>`).join('');
+}
+function setSector(s){curSector=s;renderSectors();renderAll();}
+
+function renderMetrics(){
+  const d=getF();
+  const m=[
+    {l:'対象業種数',v:d.length,u:'業種'},
+    {l:'平均売上高',v:fmtK(Math.round(avg(d,4))),u:'円'},
+    {l:'平均経常利益率',v:avg(d,11).toFixed(1),u:'%'},
+    {l:'平均限界利益率',v:avg(d,6).toFixed(1),u:'%'},
+    {l:'平均BEP',v:avg(d,12).toFixed(1),u:'%'},
+  ];
+  g('metricsRow').innerHTML=m.map(x=>`<div class="metric-card"><div class="mc-label">${x.l}</div><div class="mc-val">${x.v}<span class="mc-unit">${x.u}</span></div></div>`).join('');
+}
+
+const TABS=[
+  {id:'overview',label:'業種比較'},
+  {id:'scatter',label:'収益性マップ'},
+  {id:'table',label:'データ一覧'},
+  {id:'productivity',label:'生産性'},
+  {id:'screening',label:'スクリーニング'},
+];
+function renderTabs(){
+  g('tabBar').innerHTML=TABS.map(t=>`<button class="tab${t.id===curTab?' active':''}" onclick="setTab('${t.id}')">${t.label}</button>`).join('');
+}
+function setTab(t){
+  curTab=t;renderTabs();
+  TABS.forEach(x=>{const p=g('panel-'+x.id);if(p)p.classList.toggle('active',x.id===t);});
+  renderAll();
+}
+
+function renderOverview(){
+  if(curTab!=='overview')return;
+  if(charts.c1)charts.c1.destroy();
+  const secs=Object.keys(COLORS);
+  const sa={};secs.forEach(s=>{const items=D.filter(r=>r[0]===s);sa[s]={pr:+avg(items,11).toFixed(1),mr:+avg(items,6).toFixed(1),bep:+avg(items,12).toFixed(1),lr:+avg(items,8).toFixed(1)};});
+  const items=[{l:'経常利益率',c:'#5B4299'},{l:'限界利益率',c:'#2D5A27'},{l:'BEP比率',c:'#B5432A'},{l:'労働分配率',c:'#2A5B8C'}];
+  g('leg1').innerHTML=items.map(i=>`<span class="legend-item"><span class="legend-dot" style="background:${i.c}"></span>${i.l}</span>`).join('');
+  charts.c1=new Chart(g('chart1'),{
+    type:'bar',
+    data:{labels:secs,datasets:[
+      {label:'経常利益率',data:secs.map(s=>sa[s].pr),backgroundColor:'#5B4299',borderRadius:3,barPercentage:0.7},
+      {label:'限界利益率',data:secs.map(s=>sa[s].mr),backgroundColor:'#2D5A27',borderRadius:3,barPercentage:0.7},
+      {label:'BEP比率',data:secs.map(s=>sa[s].bep),backgroundColor:'#B5432A',borderRadius:3,barPercentage:0.7},
+      {label:'労働分配率',data:secs.map(s=>sa[s].lr),backgroundColor:'#2A5B8C',borderRadius:3,barPercentage:0.7},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.parsed.y+'%'}}},
+      scales:{x:{grid:{display:false},ticks:{color:TXT,font:{size:11},maxRotation:30}},y:{grid:{color:GRID},ticks:{color:TXT,font:{size:11},callback:v=>v+'%'},beginAtZero:true}}}
+  });
+}
+
+function renderScatter(){
+  if(curTab!=='scatter')return;
+  if(charts.c2)charts.c2.destroy();
+  const d=getF();const mx=Math.max(...d.map(r=>r[4]));
+  const ds={};d.forEach(r=>{const s=r[0];if(!ds[s])ds[s]={label:s,data:[],backgroundColor:COLORS[s]+'88',borderColor:COLORS[s]};
+    ds[s].data.push({x:r[6],y:r[11],r:Math.max(3,Math.sqrt(r[4]/mx)*22),name:r[1],sales:r[4]});});
+  charts.c2=new Chart(g('chart2'),{
+    type:'bubble',data:{datasets:Object.values(ds)},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:16},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const p=c.raw;return[p.name,'限界利益率: '+p.x+'%','経常利益率: '+p.y+'%','売上高: '+fmtK(p.sales)+'円'];}}}},
+      scales:{x:{title:{display:true,text:'限界利益率 (%)',color:TXT,font:{size:12}},grid:{color:GRID},ticks:{color:TXT,font:{size:11}}},
+        y:{title:{display:true,text:'経常利益率 (%)',color:TXT,font:{size:12}},grid:{color:GRID},ticks:{color:TXT,font:{size:11}},min:-1}}}
+  });
+}
+
+const COLS=[
+  {k:0,l:'大分類',w:0},{k:1,l:'業種名',w:0},{k:2,l:'企業数',w:1},{k:4,l:'平均売上高',w:1,fmt:v=>v.toLocaleString()},
+  {k:5,l:'対前年(%)',w:1},{k:6,l:'限界利益率(%)',w:1},{k:11,l:'経常利益率(%)',w:1},
+  {k:12,l:'BEP(%)',w:1},{k:8,l:'労働分配率(%)',w:1},{k:14,l:'1人当り限界利益',w:1,fmt:v=>v.toLocaleString()},{k:16,l:'従業員',w:1},
+];
+
+function renderTable(){
+  if(curTab!=='table')return;
+  let d=[...getF()];
+  d.sort((a,b)=>{const va=a[sortCol],vb=b[sortCol];return typeof va==='string'?sortDir*va.localeCompare(vb):sortDir*(va-vb);});
+  g('tHead').innerHTML='<tr>'+COLS.map(c=>`<th class="${c.k===sortCol?'sorted':''} ${c.w?'num':''}" onclick="sortTbl(${c.k})">${c.l} ${c.k===sortCol?(sortDir>0?'↑':'↓'):''}</th>`).join('')+'</tr>';
+  const mxP=Math.max(...d.map(r=>r[11]));
+  g('tBody').innerHTML=d.map(r=>'<tr>'+COLS.map(c=>{
+    const v=r[c.k];const cls=c.w?'num':'';
+    if(c.k===0)return `<td><span class="sector-tag" style="background:${SECTOR_BG[v]};color:${COLORS[v]}">${v}</span></td>`;
+    if(c.k===11){const bw=Math.max(2,v/mxP*50);return `<td class="${cls}"><span class="mini-bar" style="width:${bw}px;background:${COLORS[r[0]]}44"></span>${v.toFixed?v.toFixed(1):v}</td>`;}
+    return `<td class="${cls}">${c.fmt?c.fmt(v):(typeof v==='number'&&c.w?v.toFixed?v%1?v.toFixed(1):v:v:v)}</td>`;
+  }).join('')+'</tr>').join('');
+  g('rowCount').textContent=d.length+'件';
+}
+function sortTbl(k){if(sortCol===k)sortDir*=-1;else{sortCol=k;sortDir=-1;}renderTable();}
+
+function renderProductivity(){
+  if(curTab!=='productivity')return;
+  if(charts.c3)charts.c3.destroy();
+  const d=[...getF()].sort((a,b)=>b[14]-a[14]).slice(0,20);
+  g('leg3').innerHTML='<span class="legend-item"><span class="legend-dot" style="background:#5B4299"></span>1人当り限界利益</span><span class="legend-item"><span class="legend-dot" style="background:#2D5A27"></span>1人当り人件費</span>';
+  charts.c3=new Chart(g('chart3'),{
+    type:'bar',data:{
+      labels:d.map(r=>r[1].length>12?r[1].slice(0,12)+'…':r[1]),
+      datasets:[
+        {label:'1人当り限界利益(千円)',data:d.map(r=>r[14]),backgroundColor:'#5B4299',borderRadius:3},
+        {label:'1人当り人件費(千円)',data:d.map(r=>r[15]),backgroundColor:'#2D5A27',borderRadius:3},
+      ]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.parsed.x.toLocaleString()+'千円'}}},
+      scales:{x:{grid:{color:GRID},ticks:{color:TXT,font:{size:11},callback:v=>(v/1000).toFixed(0)+'百万'}},y:{grid:{display:false},ticks:{color:TXT,font:{size:10}}}}}
+  });
+}
+
+function renderScreening(){
+  if(curTab!=='screening')return;
+  const good=D.filter(r=>r[16]<=10&&r[11]>=7&&r[12]<=90&&r[6]>=50&&r[5]>=100).sort((a,b)=>b[11]-a[11]);
+  g('goodCards').innerHTML=good.map((r,i)=>{
+    const sc=COLORS[r[0]];
+    return `<div class="r-card"><div class="rc-head"><div><div class="rc-rank">#${i+1}</div><div class="rc-name">${r[1]}</div><div class="rc-sector" style="color:${sc}">${r[0]}</div></div><div style="text-align:right"><div class="rc-profit good">${r[11]}%</div><div class="rc-profit-label">経常利益率</div></div></div>
+    <div class="rc-metrics"><div class="rc-m"><span class="l">限界利益率</span> <span class="v">${r[6]}%</span></div><div class="rc-m"><span class="l">BEP</span> <span class="v">${r[12]}%</span></div><div class="rc-m"><span class="l">安全余裕率</span> <span class="v">${(100-r[12]).toFixed(1)}%</span></div><div class="rc-m"><span class="l">従業員</span> <span class="v">${r[16]}人</span></div><div class="rc-m"><span class="l">対前年</span> <span class="v${r[5]>=105?' good':''}">${r[5]}%</span></div><div class="rc-m"><span class="l">黒字率</span> <span class="v">${r[3]}%</span></div></div></div>`;
+  }).join('');
+
+  const bad=[];
+  D.forEach(r=>{let s=0,rs=[];
+    if(r[11]<=3&&r[12]>=90){s+=3;rs.push('低利益+高BEP');}
+    if(r[16]>=30&&r[11]<=5){s+=2;rs.push('大規模+低利益');}
+    if(r[3]<=40){s+=2;rs.push('黒字率低');}
+    if(r[5]<100&&r[11]<=4){s+=2;rs.push('衰退+低利益');}
+    if(r[9]>=100000&&r[11]<=5){s+=1;rs.push('高固定費');}
+    if(s>=3)bad.push({s,rs,r});
+  });
+  bad.sort((a,b)=>b.s-a.s);
+  g('badCards').innerHTML=bad.map(b=>{
+    const r=b.r;
+    return `<div class="r-card warn"><div class="rc-head"><div><div class="rc-name">${r[1]}</div><div class="rc-sector">${r[0]}</div></div><div style="text-align:right"><div class="rc-profit bad">危険度 ${b.s}/7</div></div></div>
+    <div class="warn-tags">${b.rs.map(t=>`<span class="warn-tag">${t}</span>`).join('')}</div>
+    <div class="rc-metrics"><div class="rc-m"><span class="l">利益率</span> <span class="v bad">${r[11]}%</span></div><div class="rc-m"><span class="l">BEP</span> <span class="v bad">${r[12]}%</span></div><div class="rc-m"><span class="l">黒字率</span> <span class="v${r[3]<50?' bad':''}">${r[3]}%</span></div><div class="rc-m"><span class="l">対前年</span> <span class="v${r[5]<100?' bad':''}">${r[5]}%</span></div><div class="rc-m"><span class="l">従業員</span> <span class="v">${r[16]}人</span></div></div></div>`;
+  }).join('');
+}
+
+function toggleScreen(mode){
+  g('screenGood').style.display=mode==='good'?'':'none';
+  g('screenBad').style.display=mode==='bad'?'':'none';
+  document.querySelectorAll('.toggle-btn').forEach(b=>{b.classList.remove('active');});
+  document.querySelector('.t-'+mode).classList.add('active');
+}
+
+function renderAll(){renderMetrics();renderOverview();renderScatter();renderTable();renderProductivity();renderScreening();}
+
+g('searchInput').addEventListener('input',e=>{searchQ=e.target.value;renderTable();});
+
+renderSectors();renderTabs();renderAll();
+</script>
+</body>
+</html>
